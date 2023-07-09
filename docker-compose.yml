@@ -13,3 +13,5 @@ services:
       - '8000:8000'
     environment:
       - OPENAI_API_KEY
+      - NL_DATABASE_NAME
+      - NL_DATABASE_TYPE
