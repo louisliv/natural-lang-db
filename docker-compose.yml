@@ -1,0 +1,15 @@
+version: '2.4'
+
+services:
+  query-app:
+    command: flask --app server --debug run -h 0.0.0.0 -p 8000
+    container_name: query-app
+    build:
+      context: ./src
+    image: query-app
+    volumes:
+      - ./src/:/usr/src/app/
+    ports:
+      - '8000:8000'
+    environment:
+      - OPENAI_API_KEY
