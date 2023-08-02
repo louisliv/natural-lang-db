@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+  <div class="row">
+    <div class="col-sm-12">
+      <h1>Login</h1>
+    </div>
+  </div>
+  <form id="loginForm" action="login" method="POST">
+    <div class="form-group">
+      <label for="token">Token</label>
+      <input type="text" name="token" class="form-control" id="token" aria-describedby="tokenInput">
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  $(document).ready(function() {
+    $("#loginForm").submit(function(event) {
+      event.preventDefault();
+      var token = $("#token").val();
+      $.ajax({
+        url: "/login",
+        type: "POST",
+        contentType:"application/json",
+        dataType: "json",
+        data: JSON.stringify({token: token}),
+        success: function(data) {
+          window.location.href = "/";
+        },
+        error: function(data) {
+          console.log(data);
+          alert("Error: " + data.responseText);
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

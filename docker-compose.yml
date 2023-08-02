@@ -15,3 +15,5 @@ services:
       - OPENAI_API_KEY
       - NL_DATABASE_NAME
       - NL_DATABASE_TYPE
+      - APP_TOKEN
+      - SECRET_KEY
