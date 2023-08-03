@@ -25,11 +25,8 @@ def index():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    print(request.method, flush=True)
     if request.method == "POST":
         is_authorised = TokenAuthentication(request).is_authorised()
-
-        print(is_authorised, flush=True)
 
         if not is_authorised:
             return jsonify(error=400, text=str("Invalid Token")), 400
@@ -43,6 +40,14 @@ def login():
         return response
 
     return render_template("login.html")
+
+
+@app.route("/logout", methods=["GET"])
+@login_required
+def logout():
+    session.clear()
+
+    return jsonify()
 
 
 @app.route("/ask-query", methods=["POST"])

@@ -74,3 +74,16 @@ def test_ask_query_redirect(test_environment):
 
     response = client.post("/ask-query", json={"prompt": "test"})
     assert response.status_code == 302
+
+
+def test_logout(test_token, test_environment):
+    client = app.test_client()
+
+    with client.session_transaction() as session:
+        session["token"] = test_token
+
+    response = client.get("/logout")
+    assert response.status_code == 200
+    assert response.content_type == "application/json"
+    print(session)
+    assert not session.get("token")

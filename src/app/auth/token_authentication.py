@@ -11,8 +11,11 @@ class TokenAuthentication:
         self.request: Request = request
 
     def is_authenticated(self) -> bool:
-        session_token = session.get("token")
-        return session_token and self._is_valid_token(session_token)
+        if self.request.headers.get("Authorization"):
+            token = self.request.headers.get("Authorization").replace("Token ", "")
+        else:
+            token = session.get("token")
+        return token and self._is_valid_token(token)
 
     def is_authorised(self) -> bool:
         if not self.request.method == "POST":

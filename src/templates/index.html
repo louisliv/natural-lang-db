@@ -11,19 +11,79 @@
 
     .chat-message {
       margin-bottom: 20px;
+      padding: 10px;
+      border-radius: 20px;
     }
 
     .chat-message-user {
       display: flex;
       justify-content: end;
-      color: blue;
+      color: white;
       font-size: large;
       padding-right: 10px;
+      background-color: #007bff;
     }
 
     .chat-message-bot {
-      color: red;
+      color: white;
       font-size: large;
+      background-color: #28a745;
+    }
+
+    .message-row {
+      padding-right: 10px;
+    }
+
+    .typing-indicator {
+      display: block;
+      width: 60px;
+      height: 40px;
+      border-radius: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #28a745;
+    }
+
+    .circle {
+      display: block;
+      height: 10px;
+      width: 10px;
+      border-radius: 50%;
+      background-color: white;
+      margin: 3px;
+    }
+
+    .circle.scaling {
+      animation: typing 1000ms ease-in-out infinite;
+      animation-delay: 3600ms;
+    }
+
+    .circle:nth-child(1) {
+      animation-delay: 0ms;
+    }
+
+    .circle:nth-child(2) {
+      animation-delay: 333ms;
+    }
+
+    .circle:nth-child(3) {
+      animation-delay: 666ms;
+    }
+
+    @keyframes typing {
+      0% {
+        transform: scale(1);
+      }
+      33% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.4);
+      }
+      100% {
+        transform: scale(1);
+      }
     }
   </style>
 {% endblock %}
@@ -31,24 +91,34 @@
 {% block content %}
   <div class="row">
     <div class="col-sm-12">
-      <h1>Database Query</h1>
+      <div class="d-flex align-items-center">
+        <div class="flex-fill">
+          <h1>Database Query</h1>
+        </div>
+        <div>
+          <button id="logoutButton" type="button" class="btn btn-danger">Logout</button>
+        </div>
+      </div>
     </div>
-  </div>
-  <form id="promptForm" action="ask-query" method="POST">
-    <div class="form-group">
-      <label for="prompt">Ask your database a question</label>
-      <input type="text" name="prompt" class="form-control" id="prompt" aria-describedby="promptInput">
+    <div class="col-sm-12">
+      <form id="promptForm" action="ask-query" method="POST">
+        <div class="form-group">
+          <label for="prompt">Ask your database a question</label>
+          <input type="text" name="prompt" class="form-control" id="prompt" aria-describedby="promptInput">
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </form>
     </div>
-    <button type="submit" class="btn btn-primary">Submit</button>
-  </form>
-  <div class="col-sm-12">
-    <div class="chat-box" id="chatBox"></div>
+    <div class="col-sm-12">
+      <div class="chat-box" id="chatBox"></div>
+    </div>
   </div>
 {% endblock %}
 
 {% block extra_js %}
   <script>
     baseUrl = window.location.origin
+    var requests = {};
     $(document).ready(function () {
       $("#promptForm").submit(function (event) {
         event.preventDefault();
@@ -60,6 +130,12 @@
           prompt: $("#prompt").val(),
         };
 
+        const requestUUID = uuidv4();
+
+        requests[requestUUID] = formData;
+
+        addTypingIndicator(requestUUID);
+
         $.ajax({
           type: "POST",
           url: `${baseUrl}/ask-query`,
@@ -68,17 +144,48 @@
           dataType: "json",
           encode: true,
         }).done(function (data) {
+          delete requests[requestUUID];
           addBotMessage(data.query_result);
+          removeTypingIndicator(requestUUID);
           clearPromptInput();
         });
       });
     });
+
+    function uuidv4() {
+      return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+      );
+    }
+
+    function addTypingIndicator(requestUUID) {
+      if ($(".typing-indicator").length > 0) {
+        removeTypingIndicator(requestUUID);
+      }
+      const chatBox = $("#chatBox");
+      const html =
+        `<div class="typing-indicator">
+          <div class="circle scaling"></div>
+          <div class="circle scaling"></div>
+          <div class="circle scaling"></div>
+        </div>`;
+      chatBox.append(html);
+      chatBox.scrollTop(chatBox.prop("scrollHeight"));
+    }
+
+    function removeTypingIndicator(requestUUID) {
+      $(".typing-indicator").remove();
+
+      if (!requests[requestUUID] && Object.keys(requests).length > 0) {
+        addTypingIndicator();
+      }
+    }
     
     function addUserMessage(prompt) {
       var fullMessage = `You: ${prompt}`;
       var chatBox = $("#chatBox")
 
-      chatBox.append(`<div class="chat-message chat-message-user">${fullMessage}</div>`);
+      chatBox.append(buildMessageHTML(fullMessage, "chat-message-user"));
 
       chatBox.scrollTop(chatBox.prop("scrollHeight"));
     }
@@ -87,13 +194,33 @@
       var fullMessage = `Bot: ${answer}`;
       var chatBox = $("#chatBox")
 
-      chatBox.append(`<div class="chat-message chat-message-bot">${fullMessage}</div>`);
+      chatBox.append(buildMessageHTML(fullMessage, "chat-message-bot"));
 
       chatBox.scrollTop(chatBox.prop("scrollHeight"));
+    }
+
+    function buildMessageHTML(message, type) {
+      const fillToEnd = type === "chat-message-user" ? "flex-fill" : "";
+
+      return `<div class="message-row d-flex"><div class="${fillToEnd}"></div><div class="chat-message ${type}">${message}</div></div>`
     }
 
     function clearPromptInput() {
       $("#prompt").val('')
     }
+
+    $("#logoutButton").click(function () {
+      window.location.href = `${baseUrl}/`;
+
+      $.ajax({
+        type: "GET",
+        url: `${baseUrl}/logout`,
+        contentType:"application/json",
+        dataType: "json",
+        encode: true,
+      }).done(function (data) {
+        window.location.href = `${baseUrl}/`;
+      });
+    });
   </script>
 {% endblock %}
